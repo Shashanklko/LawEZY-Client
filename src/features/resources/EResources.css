@@ -1,0 +1,202 @@
+.resourceSection {
+  min-height: 100vh;
+  width: 100vw;
+  padding: 60px 10% 30px; /* COMPACT TOP GAP */
+  background: #0D0000;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.resourceHeader {
+  max-width: 800px;
+  margin-bottom: 25px; /* TIGHTER RHYTHM */
+}
+
+.resourceBadge {
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: 0.65rem; /* MINI SCALE */
+  font-weight: 600;
+}
+
+.resourceTitle {
+  font-size: 2.4rem; /* MICRO-GRID TITLE */
+  font-weight: 900;
+  margin: 5px 0 10px;
+  background: linear-gradient(135deg, #FFF 0%, rgba(255,255,255,0.7) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -1px;
+}
+
+.resourceSubtitle {
+  font-size: 0.9rem; /* CONCENTRATED SCALE */
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 500px;
+}
+
+.resourceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px; /* TIGHT GRID SNAP */
+}
+
+.resourceCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 15px; /* TIGHTER RADIUS */
+  padding: 18px; /* MICRO-GRID PADDING */
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.resourceCard:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent-gold);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.cardIcon {
+  font-size: 1.4rem; /* MICRO SCALE */
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+}
+
+.cardStats {
+  font-size: 0.65rem; /* MICRO SCALE */
+  color: var(--accent-gold);
+  background: rgba(212, 175, 55, 0.1);
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-weight: 600;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.cardTitle {
+  font-size: 1.3rem; /* MICRO SCALE */
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.cardDesc {
+  font-size: 0.82rem; /* MICRO SCALE */
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 20px;
+  flex: 1;
+}
+
+.cardAction {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 700;
+  font-size: 0.8rem; /* MICRO SCALE */
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardAction:hover {
+  color: var(--accent-gold);
+  gap: 12px;
+}
+
+/* THE SIXTH CARD: EXPLORE MORE */
+.exploreMoreCard {
+  background: linear-gradient(135deg, #1A0000 0%, #300000 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 20px;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.exploreMoreCard::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+  opacity: 0.5;
+}
+
+.exploreMoreCard:hover {
+  transform: translateY(-8px);
+  border-color: var(--accent-gold);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.exploreContent h3 {
+  font-size: 1.6rem; /* MICRO SCALE */
+  font-weight: 900;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.exploreContent p {
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 15px;
+  font-size: 0.8rem; /* MICRO SCALE */
+}
+
+.exploreBtn {
+  background: white;
+  color: #1A0000;
+  border: none;
+  padding: 10px 25px; /* MICRO SCALE */
+  border-radius: 100px;
+  font-weight: 800;
+  font-size: 0.8rem; /* MICRO SCALE */
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.exploreBtn:hover {
+  background: var(--accent-gold);
+  transform: scale(1.05);
+  box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3);
+}
+
+@media (max-width: 1024px) {
+  .resourceGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .resourceTitle {
+    font-size: 2.8rem;
+  }
+  .resourceGrid {
+    grid-template-columns: 1fr;
+  }
+}

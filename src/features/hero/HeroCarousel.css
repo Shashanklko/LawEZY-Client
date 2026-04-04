@@ -1,0 +1,124 @@
+.hero-carousel {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: var(--primary-bg);
+  scroll-snap-align: start;
+}
+
+.slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out, transform 10s ease-in-out;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.1);
+  display: flex;
+  align-items: center;
+}
+
+.slide.active {
+  opacity: 1;
+  transform: scale(1);
+  z-index: 10;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  backdrop-filter: blur(2px) brightness(0.9); /* Sharper for centered tech look */
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Centered Horizontally */
+  text-align: center;      /* Centered Text */
+}
+
+.hero-content {
+  max-width: 1000px; /* Room for centered symmetry */
+  padding: 0 var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Symmetrical stacking */
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 1s ease-out 0.5s;
+}
+
+.slide.active .hero-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-title {
+  font-size: 5.8rem;
+  line-height: 1;
+  margin-bottom: 25px;
+  letter-spacing: -1.5px; /* Elite Strategic Spacing */
+  color: white !important;
+  font-weight: 800;
+  text-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+.hero-title .highlight {
+  color: #D97706 !important; /* Vivid Copper-Amber */
+  background: linear-gradient(to right, #D97706, #F59E0B);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-content .hero-subtitle {
+  font-size: 1.7rem !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin-bottom: 50px;
+  max-width: 800px;
+  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: -0.1px;
+  padding-left: 0; /* No longer needed for centered stack */
+  position: relative;
+  text-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centered Button Position */
+    gap: 30px;
+}
+
+.carousel-indicators {
+  position: absolute;
+  bottom: 60px;
+  left: 10%; /* Aligned with cinematic margin */
+  display: flex;
+  gap: 15px;
+  z-index: 10;
+}
+
+.indicator {
+  width: 45px;
+  height: 2px; /* Minimalist Luxury Bar */
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.indicator.active {
+  background: var(--accent-burgundy);
+  width: 80px; /* Expands for authority */
+}
+
+@keyframes scroll-ping {
+  0% { transform: translateX(-50%) translateY(0); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(15px); opacity: 0; }
+}
