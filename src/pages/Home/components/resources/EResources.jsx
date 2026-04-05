@@ -1,7 +1,29 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './EResources.css';
 
 const EResources = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
   const resources = [
     {
       id: 1,
@@ -36,9 +58,13 @@ const EResources = () => {
   ];
 
   return (
-    <section className="resourceSection" id="resources">
+    <section 
+      ref={sectionRef} 
+      className={`resourceSection ${isVisible ? 'reveal-active' : 'reveal-hidden'}`} 
+      id="resources"
+    >
       <div className="resourceHeader">
-        <span className="resourceBadge">Intelligence Archive</span>
+
         <h2 className="resourceTitle">Elite E-Resources</h2>
         <p className="resourceSubtitle">
           Direct access to the world's most comprehensive legal and financial intelligence library. 

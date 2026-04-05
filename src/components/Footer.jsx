@@ -1,9 +1,31 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const Footer = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const footerRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (footerRef.current) {
+      observer.observe(footerRef.current);
+    }
+
+    return () => {
+      if (footerRef.current) {
+        observer.unobserve(footerRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <footer className="footer-premium">
-      <div className="footer-container">
+    <footer ref={footerRef} className="footer-premium">
+      <div className={`footer-container ${isVisible ? 'reveal-active' : 'reveal-hidden'}`}>
         <div className="footer-grid">
           <div className="footer-brand">
             <h3 className="f-logo">LAWEZY<span className="f-dot">.</span></h3>
@@ -63,6 +85,18 @@ const Footer = () => {
           flex-direction: column;
           justify-content: center;
         }
+
+        /* SCROLL REVEAL */
+        .reveal-hidden {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        .reveal-active {
+          opacity: 1;
+          transform: translateY(0);
+          transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
         .footer-container {
           max-width: 1400px;
           margin: 0 auto;

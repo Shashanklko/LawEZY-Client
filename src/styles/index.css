@@ -10,9 +10,10 @@
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(127, 29, 29, 0.1);
   
-  /* Typography */
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  /* Typography: Elite Institutional Stack */
+  --font-heading: 'Spectral', serif;
+  --font-body: 'Hanken Grotesk', sans-serif;
+  --font-accent: 'Inter', sans-serif;
   
   /* Spacing & Radii */
   --spacing-sm: 8px;
@@ -33,7 +34,6 @@
 }
 
 html {
-  scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
 }
 
@@ -46,14 +46,34 @@ body {
   overflow-x: hidden;
 }
 
+section, footer {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
 h1, h2, h3, h4, .btn-premium, .btn-secondary, .nav-link, .brand-signature {
   font-family: var(--font-heading);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 h1, h2 {
-  letter-spacing: -0.03em;
-  font-weight: 800;
+  font-weight: 700; 
+  line-height: 1.05; /* Tighter line height for elite spacing */
+}
+
+h1 { font-size: 3.5rem; }
+h2 { font-size: 2.8rem; }
+h3 { font-size: 1.8rem; }
+
+.meta-label {
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  font-size: 0.7rem; /* Slightly smaller badge text */
+  color: var(--accent-burgundy);
+  display: block;
+  margin-bottom: 10px;
 }
 
 /* Glassmorphism Utility */
