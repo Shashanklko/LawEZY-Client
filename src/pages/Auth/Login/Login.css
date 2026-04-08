@@ -18,10 +18,12 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1100px; /* Reduced from 1400px to bring items closer */
   margin: 0 auto;
   display: flex;
   align-items: center;
+  justify-content: center; /* Center items with a gap */
+  gap: 80px; /* Precise gap for high-focus layout */
   padding: 0 5%;
   min-height: 100vh;
 }
@@ -56,9 +58,9 @@
 
 /* LEFT SIDE: HERO CONTENT */
 .login-hero-section {
-  flex: 1;
+  flex: none; /* Avoid stretching to maintain tight gap */
   color: white;
-  padding-right: 50px;
+  padding-right: 0;
   animation: heroFadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -139,6 +141,64 @@
   color: white;
   background: rgba(255, 255, 255, 0.1);
   transform: translateX(-5px);
+}
+
+/* BRANDING HEADER */
+.login-portal-header {
+  position: fixed;
+  top: 40px;
+  left: 5%;
+  z-index: 1000;
+}
+
+.portal-brand-link-wrapper {
+  text-decoration: none;
+  display: block;
+}
+
+.portal-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.portal-brand-name {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: #7F1D1D;
+  letter-spacing: -0.05em;
+  filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+.portal-brand-divider {
+  width: 1px;
+  height: 35px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.portal-ai-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-ai-name {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  color: #7F1D1D;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+.portal-ai-tagline {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #8B5A2B;
+  letter-spacing: 1px;
+  margin-top: 2px;
+  text-transform: uppercase;
 }
 /* PORTAL NAVIGATION EXITS */
 .portal-exit-btn {

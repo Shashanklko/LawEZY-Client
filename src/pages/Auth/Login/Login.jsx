@@ -8,6 +8,20 @@ const Login = () => {
   return (
     <div className="login-page">
       <div className="login-overlay"></div>
+
+      {/* BRANDING HEADER */}
+      <div className="login-portal-header stagger-reveal">
+        <Link to="/" className="portal-brand-link-wrapper">
+          <div className="portal-brand-block">
+            <span className="portal-brand-name">LAWEZY</span>
+            <div className="portal-brand-divider"></div>
+            <div className="portal-ai-brand">
+              <span className="portal-ai-name">Lawino.ai</span>
+              <span className="portal-ai-tagline">LEGAL & BUSINESS INTELLIGENCE</span>
+            </div>
+          </div>
+        </Link>
+      </div>
       
       {/* DYNAMIC MESH BACKDROP */}
       <div className="mesh-bg-container">

@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ExpertEcosystem.css';
 import legalImg from '../../../../assets/experts/legal_pillar.png';
 import financeImg from '../../../../assets/experts/finance_pillar.png';
 
 const ExpertEcosystem = () => {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
 
@@ -51,7 +53,7 @@ const ExpertEcosystem = () => {
             <li>Family & Property</li>
             <li>Protecting Your Ideas</li>
           </ul>
-          <button className="pillar-cta-btn">
+          <button className="pillar-cta-btn" onClick={() => navigate('/experts?category=legal')}>
             Find a Lawyer <span className="btn-arrow">→</span>
           </button>
         </div>
@@ -77,7 +79,7 @@ const ExpertEcosystem = () => {
             <li>Startup Planning</li>
             <li>Audit & Compliance</li>
           </ul>
-          <button className="pillar-cta-btn gold">
+          <button className="pillar-cta-btn gold" onClick={() => navigate('/experts?category=financial')}>
             Talk to an Expert CA <span className="btn-arrow">→</span>
           </button>
         </div>

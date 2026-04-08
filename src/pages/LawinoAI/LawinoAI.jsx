@@ -2,21 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './LawinoAI.css';
 
 const LawinoAI = () => {
-  const [messages, setMessages] = useState([
-    { 
-      role: 'user', 
-      content: "I'm buying a 2BHK in South Delhi, but the builder is delaying possession by 12 months. What are my rights under RERA?" 
-    },
-    { 
-      role: 'ai', 
-      content: "Under **RERA Section 18**, you have the right to claim a full refund with interest, or monthly compensation for the delay. I recommend a formal legal notice to the builder as your first strategic step.",
-      expert: {
-        name: "Adv. Sameer Khan",
-        label: "Real Estate Attorney • 15+ Years Experience • 4.9 ★",
-        avatar: "SK"
-      }
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -32,11 +18,17 @@ const LawinoAI = () => {
   }, []);
 
   const handleSend = () => {
+    if (!input.trim()) return;
     setMessages([...messages, { role: 'user', content: input }]);
     setInput('');
     setTimeout(() => {
       setMessages(prev => [...prev, { role: 'ai', content: 'Strategy protocols updated. Identifying absolute risk-mitigation vectors based on LawEZY expert database.' }]);
     }, 1200);
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setInput('');
   };
 
   // Auto-resize textarea
@@ -85,6 +77,11 @@ const LawinoAI = () => {
                 <span>{theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}</span>
               </button>
             </div>
+
+            <button className="btn-new-chat" onClick={handleNewChat}>
+              <span className="plus-icon">+</span>
+              <span>New Chat</span>
+            </button>
             
             <div className="sidebar-group">
               <span className="sidebar-label">History</span>

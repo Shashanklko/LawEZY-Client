@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './EResources.css';
 
 const EResources = () => {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
 
@@ -89,7 +91,7 @@ const EResources = () => {
           <div className="exploreContent">
             <h3>The Global Hub</h3>
             <p>Access the full 50,000+ document archive including international case law and sovereign tax treaties.</p>
-            <button className="exploreBtn">Explore Full Library</button>
+            <button className="exploreBtn" onClick={() => navigate('/library')}>Explore Full Library</button>
           </div>
         </div>
       </div>

@@ -1,11 +1,37 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  
+  // MOCK AUTH STATE (In real app, this comes from an Auth Context)
+  const [isLoggedIn, setIsLoggedIn] = useState(false); 
+  const [userRole, setUserRole] = useState('seeker'); // 'seeker' or 'expert'
+  
   const location = useLocation();
+  const helpRef = useRef(null);
+  const notifyRef = useRef(null);
 
-  const closeMenu = () => setIsMobileMenuOpen(false);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (helpRef.current && !helpRef.current.contains(event.target)) {
+        setIsHelpOpen(false);
+      }
+      if (notifyRef.current && !notifyRef.current.contains(event.target)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const closeMenu = () => {
+    setIsMobileMenuOpen(false);
+    setIsHelpOpen(false);
+    setIsNotificationsOpen(false);
+  };
 
   return (
     <nav className="navbar-premium glass">
@@ -40,22 +66,75 @@ const Navbar = () => {
             <Link to="/lawino-ai" className={`nav-link ${location.pathname === '/lawino-ai' ? 'active' : ''}`} onClick={closeMenu}>LAWINO.AI</Link>
             <Link to="/library" className={`nav-link ${location.pathname === '/library' ? 'active' : ''}`} onClick={closeMenu}>LIBRARY</Link>
             <Link to="/experts" className={`nav-link ${location.pathname === '/experts' ? 'active' : ''}`} onClick={closeMenu}>EXPERTS</Link>
+            <Link to="/messages" className={`nav-link ${location.pathname === '/messages' ? 'active' : ''}`} onClick={closeMenu}>MESSAGES</Link>
             <Link to="/community" className={`nav-link ${location.pathname === '/community' ? 'active' : ''}`} onClick={closeMenu}>COMMUNITY</Link>
             <Link to="/about" className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`} onClick={closeMenu}>ABOUT</Link>
           </div>
 
           <div className="nav-actions">
-            <Link to="/help" className="nav-help" onClick={closeMenu}>
-              <div className="help-icon-wrapper">
-                <span className="help-text">HELP</span>
-                <div className="help-tail"></div>
+            <div className="nav-help-container" ref={helpRef}>
+              <div 
+                className={`nav-help ${isHelpOpen ? 'active' : ''}`} 
+                onClick={() => setIsHelpOpen(!isHelpOpen)}
+              >
+                <div className="help-icon-wrapper">
+                  <span className="help-text">HELP</span>
+                  <span className="help-caret">▼</span>
+                </div>
               </div>
-            </Link>
-            <Link to="/login" className="nav-link login-link" onClick={closeMenu}>Login</Link>
-            <Link to="/signup" onClick={closeMenu}>
-              <button className="btn-secondary">Join Us</button>
-            </Link>
-            <button className="btn-premium" onClick={closeMenu}>Get Consultations</button>
+              {isHelpOpen && (
+                <div className="help-dropdown glass">
+                  <Link to="/contact" className="dropdown-item" onClick={closeMenu}>CONTACT US</Link>
+                  <Link to="/faq" className="dropdown-item" onClick={closeMenu}>FAQ</Link>
+                </div>
+              )}
+            </div>
+            
+            {!isLoggedIn ? (
+              <>
+                <Link to="/login" className="nav-link login-link" onClick={closeMenu}>Login</Link>
+                
+                <Link to="/signup?role=expert" onClick={closeMenu}>
+                  <button className="btn-secondary">Join Us (As Expert)</button>
+                </Link>
+
+                <Link to="/signup?role=seeker" onClick={closeMenu}>
+                  <button className="btn-premium">Get Consultations</button>
+                </Link>
+              </>
+            ) : (
+              <div className="logged-in-actions">
+                <div className="nav-notifications-container" ref={notifyRef}>
+                  <button 
+                    className={`btn-icon-nav ${isNotificationsOpen ? 'active' : ''}`}
+                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  >
+                    <span className="notify-bell">🔔</span>
+                    <span className="notify-dot"></span>
+                  </button>
+                  {isNotificationsOpen && (
+                    <div className="notifications-dropdown glass">
+                      <div className="notify-header">NOTIFICATIONS</div>
+                      <div className="notify-list">
+                        <div className="notify-empty">No strategic updates yet.</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {userRole === 'expert' ? (
+                  <Link to="/dashboard" onClick={closeMenu}>
+                    <button className="btn-secondary">Dashboard</button>
+                  </Link>
+                ) : (
+                  <Link to="/profile" onClick={closeMenu}>
+                    <button className="btn-secondary">My Profile</button>
+                  </Link>
+                )}
+                
+                <button className="btn-premium" onClick={() => setIsLoggedIn(false)}>Logout</button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -87,7 +166,7 @@ const Navbar = () => {
         .brand-section {
           display: flex;
           align-items: center;
-          gap: 15px;
+          gap: 28px;
         }
         .brand-link, .ai-brand-link { text-decoration: none; color: inherit; display: block; }
         .brand-name {
@@ -122,15 +201,112 @@ const Navbar = () => {
         .nav-link:hover { color: var(--accent-burgundy); }
         .nav-link.active { color: var(--accent-burgundy); }
 
-        .nav-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-        .nav-help { text-decoration: none; }
+        .nav-help-container { position: relative; }
+        .nav-help { 
+          text-decoration: none; 
+          cursor: pointer;
+        }
         .help-icon-wrapper {
           border: 1.5px solid var(--accent-burgundy);
           padding: 2px 10px;
           border-radius: 4px;
           transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
         .help-text { font-size: 0.65rem; font-weight: 900; color: var(--accent-burgundy); }
+        .help-caret { font-size: 0.5rem; color: var(--accent-burgundy); margin-top: 1px; }
+        
+        .help-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 10px;
+          min-width: 160px;
+          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(127, 29, 29, 0.1);
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+          z-index: 2100;
+          display: flex;
+          flex-direction: column;
+        }
+        .dropdown-item {
+          padding: 12px 20px;
+          text-decoration: none;
+          color: var(--accent-burgundy);
+          font-size: 0.68rem;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          transition: all 0.2s;
+        }
+        .dropdown-item:hover {
+          background: var(--accent-burgundy);
+          color: white;
+        }
+        /* NOTIFICATIONS & LOGGED IN */
+        .nav-actions { 
+          display: flex; 
+          align-items: center; 
+          gap: 18px; 
+          margin-left: auto; 
+        }
+        .logged-in-actions { 
+          display: flex; 
+          align-items: center; 
+          gap: 18px; 
+        }
+        .btn-icon-nav {
+          background: transparent;
+          border: 1.5px solid rgba(127, 29, 29, 0.1);
+          width: 38px;
+          height: 38px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          position: relative;
+        }
+        .notify-dot {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 6px;
+          height: 6px;
+          background: #ef4444;
+          border-radius: 50%;
+        }
+        
+        .notifications-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 10px;
+          min-width: 280px;
+          background: white;
+          border: 1px solid rgba(127, 29, 29, 0.1);
+          border-radius: 8px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+          z-index: 2000;
+        }
+        .notify-header {
+          padding: 12px 20px;
+          border-bottom: 1px solid #eee;
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: #888;
+          letter-spacing: 1px;
+        }
+        .notify-empty {
+          padding: 30px 20px;
+          text-align: center;
+          font-size: 0.85rem;
+          color: #bbb;
+        }
+
         .btn-secondary {
           padding: 8px 16px;
           background: transparent;
@@ -140,7 +316,12 @@ const Navbar = () => {
           font-size: 0.68rem;
           border-radius: 4px;
           cursor: pointer;
+          transition: all 0.3s ease;
         }
+        .btn-secondary:hover {
+          background: rgba(127, 29, 29, 0.05);
+        }
+        
         .btn-premium {
           padding: 8px 18px;
           background: linear-gradient(135deg, var(--accent-burgundy) 0%, #8B5A2B 100%);
@@ -151,6 +332,11 @@ const Navbar = () => {
           border-radius: 4px;
           cursor: pointer;
           box-shadow: 0 4px 15px rgba(127, 29, 29, 0.15);
+          transition: all 0.3s;
+        }
+        .btn-premium:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(127, 29, 29, 0.25);
         }
 
         .mobile-toggle { display: none; }

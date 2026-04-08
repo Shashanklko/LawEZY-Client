@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './WhyChooseUs.css';
 
 const WhyChooseUs = () => {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
 
@@ -30,12 +32,14 @@ const WhyChooseUs = () => {
       title: "Legal Consultations",
       description: "Direct access to senior advocates and legal specialists with over 50+ practice areas covered.",
       linkText: "See for Legal expert",
+      path: "/experts?category=legal"
     },
     {
       id: "02",
       title: "Financial Strategic Advisory",
       description: "Elite support from top-tier Chartered Accountants (CAs) and CS professionals to manage your compliance.",
       linkText: "Meet our Financial Advisor",
+      path: "/experts?category=financial"
     },
     {
       id: "03",
@@ -73,6 +77,7 @@ const WhyChooseUs = () => {
       title: "Community & Newsroom",
       description: "A collaborative dialogue for case studies, professional blogs, and legal problems. Real-time newsroom and peer engagement.",
       linkText: "Join the dialogue",
+      path: "/community"
     }
   ];
 
@@ -89,7 +94,12 @@ const WhyChooseUs = () => {
 
       <div className="strategic-portfolio-grid">
         {strategicCapabilities.map((item) => (
-          <div key={item.id} className={`strategic-card ${item.isFeatured ? 'featured-insight' : ''}`}>
+          <div 
+            key={item.id} 
+            className={`strategic-card ${item.isFeatured ? 'featured-insight' : ''}`}
+            onClick={() => item.path && navigate(item.path)}
+            style={{ cursor: item.path ? 'pointer' : 'default' }}
+          >
             <h3 className="card-heading">
               {item.title} <span className="title-chevron">›</span>
             </h3>

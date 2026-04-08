@@ -221,6 +221,20 @@ const Signup = () => {
   return (
     <div className="signup-page">
       <div className="signup-overlay"></div>
+
+      {/* BRANDING HEADER */}
+      <div className="login-portal-header stagger-reveal">
+        <Link to="/" className="portal-brand-link-wrapper">
+          <div className="portal-brand-block">
+            <span className="portal-brand-name">LAWEZY</span>
+            <div className="portal-brand-divider"></div>
+            <div className="portal-ai-brand">
+              <span className="portal-ai-name">Lawino.ai</span>
+              <span className="portal-ai-tagline">LEGAL & BUSINESS INTELLIGENCE</span>
+            </div>
+          </div>
+        </Link>
+      </div>
       <div className="mesh-bg-container">
         <div className="mesh-ball ball-1"></div>
         <div className="mesh-ball ball-2" style={{ background: role === 'pro' ? '#8B5A2B' : '#7F1D1D' }}></div>
@@ -238,8 +252,10 @@ const Signup = () => {
           <p className="hero-signup-desc">
             <Link to="/" className="hero-brand-link">
               <span style={{ color: role === 'pro' ? '#8B5A2B' : '#7F1D1D', fontWeight: '800' }}>LAWEZY</span>
-            </Link> – High-precision platform for legal 
-            and professional expertise.
+            </Link> – The high-precision bridge for legal and financial brilliance. 
+            A unified ecosystem where discerning clients access elite professional services, 
+            and top-tier experts deliver institutional-grade solutions to meet complex 
+            strategic needs.
           </p>
         </div>
 

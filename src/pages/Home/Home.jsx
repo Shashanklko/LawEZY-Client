@@ -8,7 +8,6 @@ import WhyChooseUs from './components/whychooseus/WhyChooseUs';
 import EResources from './components/resources/EResources';
 import Newsroom from './components/news/Newsroom';
 import CommunityShowcase from './components/community/CommunityShowcase';
-import Footer from '../../components/Footer';
 
 const Home = () => {
   return (
@@ -22,7 +21,6 @@ const Home = () => {
       <EResources />
       <Newsroom />
       <CommunityShowcase />
-      <Footer />
     </div>
   );
 };
