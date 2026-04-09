@@ -1,14 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
+import useAuthStore from '../store/useAuthStore'
+
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
-  // MOCK AUTH STATE (In real app, this comes from an Auth Context)
-  const [isLoggedIn, setIsLoggedIn] = useState(false); 
-  const [userRole, setUserRole] = useState('seeker'); // 'seeker' or 'expert'
+  // Real Auth State from Zustand Store
+  const { user, isAuthenticated, logout } = useAuthStore();
+  const isLoggedIn = isAuthenticated;
+  const userRole = user?.role?.toLowerCase() === 'pro' ? 'expert' : 'seeker';
+  const walletBalance = '₹ 24,500'; // Still mock for now
+  
+  const mockNotifications = [
+    { id: 1, text: "New message from Rajesh Kumar (Advocate)", time: "2m ago", type: "message" },
+    { id: 2, text: "Appointment scheduled: Tomorrow, 10:00 AM", time: "1h ago", type: "event" },
+    { id: 3, text: "Strategic case document updated", time: "3h ago", type: "doc" }
+  ];
   
   const location = useLocation();
   const helpRef = useRef(null);
@@ -94,6 +104,7 @@ const Navbar = () => {
               <>
                 <Link to="/login" className="nav-link login-link" onClick={closeMenu}>Login</Link>
                 
+                {/* Professionals/Experts Onboarding */}
                 <Link to="/signup?role=expert" onClick={closeMenu}>
                   <button className="btn-secondary">Join Us (As Expert)</button>
                 </Link>
@@ -104,6 +115,7 @@ const Navbar = () => {
               </>
             ) : (
               <div className="logged-in-actions">
+                {/* 🔔 Notifications (Universal for logged in) */}
                 <div className="nav-notifications-container" ref={notifyRef}>
                   <button 
                     className={`btn-icon-nav ${isNotificationsOpen ? 'active' : ''}`}
@@ -114,25 +126,40 @@ const Navbar = () => {
                   </button>
                   {isNotificationsOpen && (
                     <div className="notifications-dropdown glass">
-                      <div className="notify-header">NOTIFICATIONS</div>
+                      <div className="notify-header">STRATEGIC UPDATES</div>
                       <div className="notify-list">
-                        <div className="notify-empty">No strategic updates yet.</div>
+                        {mockNotifications.map(n => (
+                          <div key={n.id} className="notify-item">
+                            <span className="notify-text">{n.text}</span>
+                            <span className="notify-time">{n.time}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
 
+                {/* 💼 Expert Only Actions (Dashboard & Wallet) */}
                 {userRole === 'expert' ? (
-                  <Link to="/dashboard" onClick={closeMenu}>
-                    <button className="btn-secondary">Dashboard</button>
-                  </Link>
+                  <>
+                    <Link to="/wallet" className="nav-wallet-link" onClick={closeMenu}>
+                      <div className="wallet-badge">
+                        <span className="wallet-icon">🎟️</span>
+                        <span className="wallet-amount">{walletBalance}</span>
+                      </div>
+                    </Link>
+                    <Link to="/dashboard" onClick={closeMenu}>
+                      <button className="btn-secondary">DASHBOARD</button>
+                    </Link>
+                  </>
                 ) : (
+                  /* 👤 Seeker Only Actions (Profile) */
                   <Link to="/profile" onClick={closeMenu}>
-                    <button className="btn-secondary">My Profile</button>
+                    <button className="btn-secondary">MY PROFILE</button>
                   </Link>
                 )}
                 
-                <button className="btn-premium" onClick={() => setIsLoggedIn(false)}>Logout</button>
+                <button className="btn-premium-logout" onClick={logout}>LOGOUT</button>
               </div>
             )}
           </div>
@@ -285,26 +312,81 @@ const Navbar = () => {
           top: 100%;
           right: 0;
           margin-top: 10px;
-          min-width: 280px;
+          min-width: 320px;
           background: white;
           border: 1px solid rgba(127, 29, 29, 0.1);
           border-radius: 8px;
           box-shadow: 0 10px 40px rgba(0,0,0,0.1);
           z-index: 2000;
+          overflow: hidden;
         }
         .notify-header {
           padding: 12px 20px;
-          border-bottom: 1px solid #eee;
-          font-size: 0.65rem;
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+          font-size: 0.6rem;
           font-weight: 800;
-          color: #888;
-          letter-spacing: 1px;
+          color: #999;
+          letter-spacing: 1.5px;
+          background: #fbfbfb;
+        }
+        .notify-list {
+          max-height: 400px;
+          overflow-y: auto;
+        }
+        .notify-item {
+          padding: 16px 20px;
+          border-bottom: 1px solid rgba(0,0,0,0.03);
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+        .notify-item:hover {
+          background: rgba(127, 29, 29, 0.02);
+        }
+        .notify-text {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #333;
+          line-height: 1.4;
+        }
+        .notify-time {
+          font-size: 0.6rem;
+          color: #aaa;
+          font-weight: 600;
         }
         .notify-empty {
           padding: 30px 20px;
           text-align: center;
           font-size: 0.85rem;
           color: #bbb;
+        }
+
+        /* 🎟️ WALLET BADGE */
+        .nav-wallet-link {
+          text-decoration: none;
+        }
+        .wallet-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(139, 90, 43, 0.08);
+          border: 1px solid rgba(139, 90, 43, 0.2);
+          padding: 6px 12px;
+          border-radius: 20px;
+          transition: all 0.3s ease;
+        }
+        .wallet-badge:hover {
+          background: rgba(139, 90, 43, 0.12);
+          transform: translateY(-1px);
+        }
+        .wallet-icon { font-size: 0.9rem; }
+        .wallet-amount {
+          font-family: 'Outfit', sans-serif;
+          font-weight: 800;
+          font-size: 0.75rem;
+          color: #8B5A2B;
         }
 
         .btn-secondary {
@@ -317,6 +399,7 @@ const Navbar = () => {
           border-radius: 4px;
           cursor: pointer;
           transition: all 0.3s ease;
+          letter-spacing: 0.5px;
         }
         .btn-secondary:hover {
           background: rgba(127, 29, 29, 0.05);
@@ -337,6 +420,21 @@ const Navbar = () => {
         .btn-premium:hover {
           transform: translateY(-1px);
           box-shadow: 0 6px 20px rgba(127, 29, 29, 0.25);
+        }
+
+        .btn-premium-logout {
+          padding: 8px 18px;
+          background: #334155;
+          color: white;
+          border: none;
+          font-weight: 800;
+          font-size: 0.68rem;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        .btn-premium-logout:hover {
+          background: #0f172a;
         }
 
         .mobile-toggle { display: none; }

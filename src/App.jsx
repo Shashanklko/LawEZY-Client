@@ -1,5 +1,6 @@
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
+import ProtectedRoute from './components/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
 import Home from './pages/Home/Home'
 import LawinoAI from './pages/LawinoAI/LawinoAI'
@@ -19,12 +20,26 @@ const App = () => {
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
-        <Route path="lawino-ai" element={<LawinoAI />} />
+        <Route 
+          path="lawino-ai" 
+          element={
+            <ProtectedRoute>
+              <LawinoAI />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
         <Route path="experts" element={<ExpertListing />} />
         <Route path="expert/:id" element={<ExpertProfile />} />
-        <Route path="messages" element={<Messages />} />
+        <Route 
+          path="messages" 
+          element={
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="library" element={<Library />} />
         <Route path="community" element={<Community />} />
         <Route path="about" element={<About />} />

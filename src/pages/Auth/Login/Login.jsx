@@ -1,9 +1,45 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
+import useAuthStore from '../../../store/useAuthStore';
 import './Login.css';
 
 const Login = () => {
-  const [role, setRole] = React.useState('client');
+  const [role, setRole] = useState('client');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await apiClient.post('/api/auth/login', {
+        email,
+        password,
+      });
+
+      const { token, message } = response.data;
+      
+      // In a real app, you might want to fetch the user profile here too
+      // For now we'll set the user as an object with email and role
+      setAuth({ email, role: role.toUpperCase() }, token);
+      
+      console.log('Login successful:', message);
+      navigate('/');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.response?.data || 'Failed to login. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="login-page">
@@ -67,11 +103,20 @@ const Login = () => {
               <div className="role-pill"></div>
             </div>
 
-            <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+            <form className="login-form" onSubmit={handleSubmit}>
+              {error && <div className="login-error-message">{error}</div>}
+              
               <div className="login-group stagger-reveal delay-2">
                 <label className="login-label">Email or Phone Number</label>
                 <div className="input-with-icon">
-                  <input type="text" className="login-input" placeholder="Enter email or phone number" required />
+                  <input 
+                    type="email" 
+                    className="login-input" 
+                    placeholder="Enter your email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required 
+                  />
                   <div className="input-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                   </div>
@@ -85,9 +130,8 @@ const Login = () => {
                     type="password" 
                     className="login-input" 
                     placeholder="••••••••••••" 
-                    minLength="8"
-                    pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"
-                    title="Password must be at least 8 characters, include at least one uppercase letter, one lowercase letter, one number and one special character."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required 
                   />
                   <div className="input-icon">
@@ -100,10 +144,12 @@ const Login = () => {
                 <Link to="/forgot-password" title="Recover your access" className="login-link-subtle">Forgot password?</Link>
               </div>
 
-              <button type="submit" className="btn-login-primary stagger-reveal delay-4">
+              <button type="submit" className="btn-login-primary stagger-reveal delay-4" disabled={loading}>
                 <div className="btn-content">
-                  <span>Login</span>
-                  <svg className="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                  <span>{loading ? 'Logging in...' : 'Login'}</span>
+                  {!loading && (
+                    <svg className="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                  )}
                 </div>
               </button>
 

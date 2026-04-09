@@ -1,14 +1,184 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '../../services/apiClient';
+import useAuthStore from '../../store/useAuthStore';
 import './LawinoAI.css';
 
 const LawinoAI = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [sessionId, setSessionId] = useState(localStorage.getItem('lawino_session_id') || null);
+  const [history, setHistory] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState('light');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1200);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Tactical Edit State
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState([]); // Base64 images
+  
   const textareaRef = useRef(null);
+  const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const userName = user?.email?.split('@')[0] || 'Guest User';
+  const userRole = user?.role || 'Strategic Tier';
+
+  // Load History on Mount
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const response = await apiClient.get('/api/ai/history');
+      setHistory(response.data?.data || []);
+    } catch (err) {
+      console.error('History Error:', err);
+    }
+  };
+
+  const loadSession = async (id) => {
+    setSessionId(id);
+    setIsLoading(true);
+    try {
+      const response = await apiClient.get(`/api/ai/sessions/${id}`);
+      const historyMessages = response.data?.data || [];
+      setMessages(historyMessages.map(m => ({ 
+        role: m.role, 
+        content: m.content,
+        timestamp: m.timestamp 
+      })));
+      localStorage.setItem('lawino_session_id', id);
+    } catch (err) {
+      console.error('Session Load Error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteSession = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this strategic archive? This action cannot be undone.")) return;
+    
+    try {
+      await apiClient.delete(`/api/ai/sessions/${id}`);
+      setHistory(prev => prev.filter(s => s.id !== id));
+      if (sessionId === id) {
+        handleNewChat();
+      }
+    } catch (err) {
+      console.error('Delete Error:', err);
+      alert("Failed to purge archive. Tactical link interrupted.");
+    }
+  };
+
+  // Voice Intelligence (Native Speech Recognition)
+  const toggleMic = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition not supported in this browser.");
+      return;
+    }
+
+    if (isRecording) {
+      setIsRecording(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onend = () => setIsRecording(false);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(prev => prev + (prev ? ' ' : '') + transcript);
+    };
+
+    recognition.start();
+  };
+
+  // Media Ingestion
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttachedFiles(prev => [...prev, {
+          name: file.name,
+          base64: reader.result,
+          type: file.type
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeFile = (index) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Custom Markdown Components for Strategic Interaction
+  const MarkdownComponents = {
+    a: ({ node, ...props }) => {
+      const { href, children } = props;
+      
+      // UNIVERSAL INTERCEPT: Any link containing 'experts' or using 'internal:' protocol
+      const isInternal = href?.startsWith('internal:') || href?.includes('/experts');
+      
+      if (isInternal) {
+        // Path Sanitization: Ensure strictly absolute path for routing stability
+        let cleanPath = '/experts';
+        
+        if (href.includes('?')) {
+          const params = href.substring(href.indexOf('?'));
+          cleanPath += params;
+        } else if (href.includes(':')) {
+          // Handles 'internal:experts' or 'internal:/experts'
+          const suffix = href.split(':').pop();
+          cleanPath = suffix.startsWith('/') ? suffix : `/${suffix}`;
+        }
+        
+        return (
+          <button 
+            type="button"
+            className="btn-expert-cta" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[ROUTING] Initiating tactical redirection to:', cleanPath);
+              navigate(cleanPath);
+            }}
+          >
+            {children}
+            <span className="cta-arrow">→</span>
+          </button>
+        );
+      }
+      
+      return <a {...props} target="_blank" rel="noopener noreferrer" className="external-link" />;
+    }
+  };
+
+  // Strategic URI Transformer: Allows 'internal:' protocol tactical mapping
+  const transformUri = (uri) => {
+    console.log('URI Transformer Pulse:', uri);
+    if (uri.startsWith('internal:') || uri.includes('/experts')) return uri;
+    const url = uri.replace(/\s/g, '');
+    if (url.startsWith('http:') || url.startsWith('https:') || url.startsWith('mailto:') || url.startsWith('tel:')) {
+      return uri;
+    }
+    return '';
+  };
 
   // Responsive Detection
   useEffect(() => {
@@ -17,18 +187,139 @@ const LawinoAI = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages([...messages, { role: 'user', content: input }]);
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading]);
+
+  const handleSend = async () => {
+    if ((!input.trim() && attachedFiles.length === 0) || isLoading) return;
+    
+    const userMessage = { 
+      role: 'user', 
+      content: input,
+      files: attachedFiles.map(f => f.name) 
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
+    const currentImages = attachedFiles.map(f => f.base64);
+    
     setInput('');
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'ai', content: 'Strategy protocols updated. Identifying absolute risk-mitigation vectors based on LawEZY expert database.' }]);
-    }, 1200);
+    setAttachedFiles([]);
+    setIsLoading(true);
+
+    try {
+      const payload = { 
+        query: currentInput, 
+        sessionId: sessionId,
+        images: currentImages 
+      };
+      
+      const response = await apiClient.post('/api/ai/copilot', payload);
+      const data = response.data?.data;
+      
+      if (data?.sessionId && data.sessionId !== sessionId) {
+        setSessionId(data.sessionId);
+        localStorage.setItem('lawino_session_id', data.sessionId);
+        fetchHistory(); // Refresh sidebar history
+      }
+
+      const fullResponse = data?.response || "Strategic protocols interrupted.";
+      
+      // Industrial Grade Typewriter: Stream characters into the message state
+      const newAiMessage = { role: 'ai', content: '' };
+      setMessages(prev => [...prev, newAiMessage]);
+
+      let currentText = '';
+      const chars = Array.from(fullResponse);
+      let charIdx = 0;
+
+      const interval = setInterval(() => {
+        if (charIdx < chars.length) {
+          currentText += chars[charIdx];
+          setMessages(prev => {
+            const updated = [...prev];
+            if (updated.length > 0) {
+              updated[updated.length - 1] = { ...updated[updated.length - 1], content: currentText };
+            }
+            return updated;
+          });
+          charIdx++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 5); // Fast tactical streaming
+    } catch (err) {
+      console.error('AI Error:', err);
+      setMessages(prev => [...prev, { 
+        role: 'ai', 
+        content: 'Connection to Lawino.ai tactical link lost. Please check your network and re-engage.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartEdit = (index, content) => {
+    setEditingIndex(index);
+    setEditingValue(content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditingValue('');
+  };
+
+  const handleSaveEdit = async (index) => {
+    if (!editingValue.trim() || isLoading) return;
+    
+    // Industrial Standard: Branch conversation at the edit point
+    const truncatedMessages = messages.slice(0, index);
+    const updatedUserMessage = { 
+      role: 'user', 
+      content: editingValue,
+      files: [] // Edits typically focus on text
+    };
+    
+    setMessages([...truncatedMessages, updatedUserMessage]);
+    setEditingIndex(null);
+    
+    // Re-trigger the AI engagement
+    const currentInput = editingValue;
+    setIsLoading(true);
+
+    try {
+      const payload = { 
+        query: currentInput, 
+        sessionId: sessionId,
+        images: [] 
+      };
+      
+      const response = await apiClient.post('/api/ai/copilot', payload);
+      const data = response.data?.data;
+      
+      const aiResponse = { role: 'ai', content: data?.response };
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (err) {
+      console.error('AI Edit Error:', err);
+      setMessages(prev => [...prev, { 
+        role: 'ai', 
+        content: 'Engagement interrupted during edit processing. Please retry.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNewChat = () => {
     setMessages([]);
     setInput('');
+    setSessionId(null);
+    localStorage.removeItem('lawino_session_id');
+    setAttachedFiles([]);
   };
 
   // Auto-resize textarea
@@ -55,65 +346,52 @@ const LawinoAI = () => {
           {isSidebarCollapsed ? '→' : '←'}
         </button>
 
-        {/* Mobile-Only Close Button */}
-        {isMobile && (
-          <button 
-            className="mobile-close-btn" 
-            onClick={() => setIsMobileSidebarOpen(false)}
-            aria-label="Close History"
-          >
-            ✕
-          </button>
-        )}
-
         {(!isSidebarCollapsed || isMobile) && (
-          <div className="sidebar-middle">
-            <div className="theme-switch-container">
-              <button 
-                className="theme-switch-btn" 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              >
-                <span className="theme-icon">{theme === 'dark' ? '☀' : '☾'}</span>
-                <span>{theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}</span>
+          <>
+            <div className="sidebar-header">
+              <button className="new-chat-btn" onClick={handleNewChat}>
+                <span className="btn-icon">+</span>
+                <span className="btn-text">NEW CHAT</span>
               </button>
             </div>
-
-            <button className="btn-new-chat" onClick={handleNewChat}>
-              <span className="plus-icon">+</span>
-              <span>New Chat</span>
-            </button>
             
-            <div className="sidebar-group">
-              <span className="sidebar-label">History</span>
-              <div className="history-flow">
-                <div className="history-entry">
-                  <span className="entry-icon">◈</span>
-                  Legal Compliance Audit
-                </div>
-                <div className="history-entry">
-                  <span className="entry-icon">◈</span>
-                  Taxation Strategy v2
-                </div>
-                <div className="history-entry">
-                  <span className="entry-icon">◈</span>
-                  M&A Risk Assessment
-                </div>
-                <div className="history-entry">
-                  <span className="entry-icon">◈</span>
-                  Employment Law Review
+            <div className="sidebar-middle">
+              <div className="sidebar-group">
+                <div className="sidebar-label">HISTORY</div>
+                <div className="history-flow">
+                  {history.map(session => (
+                    <div 
+                      key={session.id} 
+                      className={`history-entry ${sessionId === session.id ? 'active' : ''}`}
+                      onClick={() => loadSession(session.id)}
+                    >
+                      <div className="entry-main">
+                        <span className="entry-icon">◈</span>
+                        <span className="entry-title">{session.title}</span>
+                      </div>
+                      <button 
+                        className="btn-delete-session" 
+                        onClick={(e) => handleDeleteSession(e, session.id)}
+                        title="Delete Session"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  {history.length === 0 && <div className="history-empty">No previous sessions</div>}
                 </div>
               </div>
             </div>
-          </div>
+          </>
         )}
         
         {!isSidebarCollapsed && (
           <div className="sidebar-bottom">
             <div className="user-profile-card">
-              <div className="profile-avatar">GU</div>
+              <div className="profile-avatar">{userName.substring(0, 2).toUpperCase()}</div>
               <div className="profile-meta">
-                <span className="profile-name">Guest User</span>
-                <span className="profile-badge">Strategic Tier</span>
+                <span className="profile-name">{userName}</span>
+                <span className="profile-badge">{userRole}</span>
               </div>
             </div>
           </div>
@@ -122,123 +400,178 @@ const LawinoAI = () => {
 
       {/* Main Command Workspace */}
       <main className={`ai-workspace ${isSidebarCollapsed ? 'expanded' : ''}`}>
-        {/* Mobile Sidebar Trigger */}
+        {/* Persistent Theme Control (Top Right) */}
+        <div className="workspace-header-actions">
+          <button 
+            className="theme-toggle-fab" 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          >
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
+        </div>
+
         {isMobile && (
           <button 
             className="mobile-sidebar-trigger" 
             onClick={() => setIsMobileSidebarOpen(true)}
-            aria-label="Toggle History"
           >
             <span className="history-icon-symbol">◈</span>
             <span className="history-label">HISTORY</span>
           </button>
         )}
-        {messages.length === 0 ? (
-          <div className="workspace-hero">
-            <div className="hero-centerpiece">
-              <div className="hero-icon-wrapper">
-                <svg className="intelligence-core mini" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle className="core-orbit" cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" />
-                  <path className="core-star" d="M50 15L55 45L85 50L55 55L50 85L45 55L15 50L45 45L50 15Z" fill="currentColor" />
-                  <path className="core-star secondary" d="M50 25L53 47L75 50L53 53L50 75L47 53L25 50L47 47L50 25Z" fill="currentColor" opacity="0.5" />
-                </svg>
+
+        <div className="chat-container">
+          {messages.length === 0 ? (
+            <div className="workspace-hero">
+              <div className="hero-centerpiece">
+                <div className="hero-icon-wrapper">
+                  <svg className="intelligence-core mini" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle className="core-orbit" cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" />
+                    <path className="core-star" d="M50 15L55 45L85 50L55 55L50 85L45 55L15 50L45 45L50 15Z" fill="currentColor" />
+                  </svg>
+                </div>
+                <h1 className="hero-greeting">Search with <span className="brand-highlight">Lawino AI</span> intelligence.</h1>
               </div>
-              <h1 className="hero-greeting">How can <span className="brand-highlight">Lawino<span className="brand-dot small">.</span>ai Copilot</span> help you today?</h1>
-            </div>
 
-            <div className="hero-suggestions">
-              <button className="suggestion-box" onClick={() => setInput('Ask a basic legal business query...')}>
-                <div className="suggest-header">
-                  <span className="suggest-icon">🔍</span>
-                  <strong>Basic Query</strong>
-                </div>
-                <p>Instant answers for legal or business questions.</p>
-              </button>
-              
-              <button className="suggestion-box" onClick={() => setInput('Explain every clause in this document...')}>
-                <div className="suggest-header">
-                  <span className="suggest-icon">📄</span>
-                  <strong>Analyze Clauses</strong>
-                </div>
-                <p>Upload a document to identify risks and hidden terms.</p>
-              </button>
-              
-              <button className="suggestion-box" onClick={() => setInput('Suggest a Lawyer or CA for my case...')}>
-                <div className="suggest-header">
-                  <span className="suggest-icon">⚖️</span>
-                  <strong>Suggest Expert</strong>
-                </div>
-                <p>Match with the right specialized Lawyer or CA.</p>
-              </button>
-
-              <button className="suggestion-box" onClick={() => setInput('Draft a professional agreement for...')}>
-                <div className="suggest-header">
-                  <span className="suggest-icon">✍️</span>
-                  <strong>Drafting Engine</strong>
-                </div>
-                <p>Generate high-precision legal and business templates.</p>
-              </button>
+              <div className="hero-suggestions">
+                <button className="suggestion-box" onClick={() => setInput('Explain Indian Companies Act compliance...')}>
+                  <div className="suggest-header">🔍 <strong>Legal Compliance</strong></div>
+                  <p>Check regulatory standards for startups.</p>
+                </button>
+                <button className="suggestion-box" onClick={() => setInput('How to optimize tax for a private limited?')}>
+                  <div className="suggest-header">💰 <strong>Tax Strategy</strong></div>
+                  <p>Ask about ROI and tax efficiency.</p>
+                </button>
+              </div>
             </div>
-            
-            <div className="hero-badge">LawEZY Strategic Agent (v4.6)</div>
-          </div>
-        ) : (
-          <div className="conversation-flow">
-            {messages.map((msg, i) => (
-              <div key={i} className={`chat-row ${msg.role}`}>
-                <div className="chat-bubble">
-                  <div className="bubble-sender">{msg.role === 'user' ? 'YOU' : 'LAWINO AI'}</div>
-                  <div className="bubble-content">{msg.content}</div>
-                  
-                  {msg.expert && (
-                    <div className="expert-match-notification">
-                      <div className="expert-avatar">{msg.expert.avatar}</div>
-                      <div className="expert-info">
-                        <span className="expert-name">{msg.expert.name}</span>
-                        <span className="expert-label">{msg.expert.label}</span>
-                      </div>
-                      <button className="btn-connect-expert">Connect →</button>
+          ) : (
+            <div className="chat-stream">
+              {messages.map((msg, i) => (
+                <div key={i} className={`chat-row ${msg.role}`}>
+                  <div className={`chat-bubble ${editingIndex === i ? 'editing' : ''}`}>
+                    <div className="bubble-sender">
+                      <span>{msg.role === 'user' ? 'YOU' : 'LAWINO AI'}</span>
+                      {msg.role === 'user' && editingIndex !== i && !isLoading && (
+                        <button 
+                          className="btn-edit-query" 
+                          onClick={() => handleStartEdit(i, msg.content)}
+                          title="Edit Query"
+                        >
+                          ✎
+                        </button>
+                      )}
                     </div>
+                    
+                    <div className="bubble-content">
+                      {editingIndex === i ? (
+                        <div className="edit-mode-container">
+                          <textarea 
+                            className="edit-textarea"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            autoFocus
+                          />
+                          <div className="edit-actions">
+                            <button className="btn-cancel-edit" onClick={handleCancelEdit}>Cancel</button>
+                            <button className="btn-save-edit" onClick={() => handleSaveEdit(i)}>Save & Resubmit</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={MarkdownComponents}
+                          transformUri={transformUri}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {isLoading && (
+                <div className="chat-row ai">
+                  <div className="chat-bubble thinking">
+                    <div className="bubble-sender">LAWINO AI</div>
+                    <div className="typing-indicator">
+                      <span></span><span></span><span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={scrollRef} className="flow-anchor"></div>
+            </div>
+          )}
+
+          {/* Floating Command Dock */}
+          <div className="chat-input-area">
+            <div className="chat-input-wrapper">
+              {attachedFiles.length > 0 && (
+                <div className="file-preview-belt">
+                  {attachedFiles.map((file, idx) => (
+                    <div key={idx} className="file-chip">
+                      {file.type.startsWith('image/') && <img src={file.base64} alt="preview" />}
+                      <span>{file.name}</span>
+                      <span className="chip-remove" onClick={() => removeFile(idx)}>✕</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="chat-input-main">
+                {/* Media Button: Anchored Left */}
+                <button className="tool-btn left-action" onClick={() => fileInputRef.current.click()} title="Upload Media">
+                  <span>+</span>
+                </button>
+                <input 
+                  type="file" 
+                  hidden 
+                  ref={fileInputRef} 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleFileChange} 
+                />
+
+                <textarea 
+                  ref={textareaRef}
+                  placeholder="Message LawinoAI..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  rows={1}
+                />
+
+                {/* Adaptive Action Toggle: Anchored Right */}
+                <div className="right-action-group">
+                  {input.trim() || attachedFiles.length > 0 ? (
+                    <button 
+                      className="btn-send active" 
+                      onClick={handleSend}
+                      disabled={isLoading}
+                    >
+                      <span>↑</span>
+                    </button>
+                  ) : (
+                    <button 
+                      className={`tool-btn right-action ${isRecording ? 'recording' : ''}`} 
+                      onClick={toggleMic}
+                      title="Voice Command"
+                    >
+                      <span>{isRecording ? '⏺' : '🎤'}</span>
+                    </button>
                   )}
                 </div>
               </div>
-            ))}
-            <div className="flow-anchor"></div>
-          </div>
-        )}
-
-        {/* Sovereign Command Bar */}
-        <div className="command-bar-wrapper">
-            <div className="command-bar glass-dock">
-              <button className="btn-tool-dock" title="Upload Reference Document">
-                <span className="icon-sign">+</span>
-              </button>
-
-              <textarea 
-                ref={textareaRef}
-                className="command-textarea" 
-                placeholder="Message Lawino Copilot..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                rows={1}
-              ></textarea>
-
-              <div className="dock-actions">
-                <button className="btn-tool-dock" title="Voice Search">
-                  <span className="icon-native">🎤</span>
-                </button>
-                <button className={`btn-send-dock ${input.trim() ? 'active' : ''}`} onClick={handleSend}>
-                  <span className="icon-arrow">↑</span>
-                </button>
-              </div>
             </div>
-            <p className="command-disclaimer">Strategic insights should be verified with matched LawEZY Experts.</p>
+            <p className="command-disclaimer">Strategic guidance for orientation only. Verify with LawEZY Experts.</p>
+          </div>
         </div>
       </main>
     </div>

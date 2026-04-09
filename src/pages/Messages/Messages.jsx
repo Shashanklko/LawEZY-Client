@@ -1,145 +1,157 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SockJS from 'sockjs-client';
+import { over } from 'stompjs';
+import apiClient from '../../services/apiClient';
+import useAuthStore from '../../store/useAuthStore';
 import './Messages.css';
 
-const MOCK_CHATS = [
-  {
-    id: 1,
-    name: 'Adv. Sameer Khanna',
-    role: 'Senior Corporate Counsel',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
-    lastMessage: 'I have reviewed the shareholder agreement.',
-    time: '10:42 AM',
-    unread: 2,
-    online: true,
-    typing: false,
-    history: [
-      { id: 1, sender: 'me', text: 'Hello, could you review the attached SHA for the upcoming seed round?', time: '09:00 AM', status: 'read' },
-      { id: 2, sender: 'expert', text: 'I have reviewed the shareholder agreement.', time: '10:42 AM' },
-      { id: 3, sender: 'expert', text: 'There are two exclusionary clauses we need to renegotiate before signing.', time: '10:43 AM' }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Adv. Priyanka Joshi',
-    role: 'Family & Civil Litigator',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
-    lastMessage: 'typing...',
-    time: 'Yesterday',
-    unread: 0,
-    online: true,
-    typing: true,
-    history: [
-      { id: 1, sender: 'me', text: 'Have you filed the petition yet?', time: 'Yesterday', status: 'read' },
-      { id: 2, sender: 'expert', text: 'The petition has been filed successfully.', time: 'Yesterday' }
-    ]
-  }
-];
+let stompClient = null;
 
 const Messages = () => {
   const navigate = useNavigate();
-  const [chats, setChats] = useState(MOCK_CHATS);
+  const { user, token } = useAuthStore();
+  
+  const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
+  const [loading, setLoading] = useState(true);
+
+  // UI States
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
   const [showChatSearch, setShowChatSearch] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [videoCallActive, setVideoCallActive] = useState(false);
   const [replyingToMsg, setReplyingToMsg] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
-  
-  const [showMediaModal, setShowMediaModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportReason, setReportReason] = useState('');
-  const [reportDetails, setReportDetails] = useState('');
-  
-  const [activeMessageMenu, setActiveMessageMenu] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTimer, setRecordingTimer] = useState(0);
-  const [showApptDropdown, setShowApptDropdown] = useState(false);
-  const [showApptModal, setShowApptModal] = useState(false);
-  const [showProfCreateModal, setShowProfCreateModal] = useState(false);
-  const [showActiveRoomModal, setShowActiveRoomModal] = useState(false);
-  const [isKnocking, setIsKnocking] = useState(false);
-  const [apptDate, setApptDate] = useState('');
-  const [apptTime, setApptTime] = useState('');
-  const [apptPrice, setApptPrice] = useState('2500');
-  const [userRole, setUserRole] = useState('client'); // For demo purposes
-  const [activeMediaTab, setActiveMediaTab] = useState('MEDIA');
-  const recordingIntervalRef = useRef(null);
-  const fileInputRef = useRef(null);
   
   const chatEndRef = useRef(null);
 
-  const activeChat = chats.find(c => c.id === activeChatId);
+  // --- WEBSOCKET LOGIC ---
+  const connectWebSocket = () => {
+    const socket = new SockJS(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/ws`);
+    stompClient = over(socket);
+    stompClient.connect({}, onConnected, onError);
+  };
+
+  const onConnected = () => {
+    console.log('Successfully connected to WebSocket');
+  };
+
+  const onError = (err) => {
+    console.error('WebSocket Error:', err);
+  };
+
+  const subscribeToChat = (sessionId) => {
+    if (stompClient && stompClient.connected) {
+      stompClient.subscribe(`/topic/chat/${sessionId}`, onMessageReceived);
+      stompClient.subscribe(`/topic/chat/${sessionId}/status`, onStatusUpdate);
+    }
+  };
+
+  const onMessageReceived = (payload) => {
+    const newMessage = JSON.parse(payload.body);
+    setMessages(prev => [...prev, newMessage]);
+    
+    // Update last message in chat list
+    setChats(prev => prev.map(chat => 
+      chat.id === newMessage.chatSessionId 
+        ? { ...chat, lastMessage: newMessage.content, time: 'Just now' } 
+        : chat
+    ));
+  };
+
+  const onStatusUpdate = (payload) => {
+    const newStatus = payload.body;
+    // Handle session status updates (RESOLVED, etc.)
+    console.log('Session Status Update:', newStatus);
+  };
+
+  // --- INITIAL DATA FETCH ---
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!user) return;
+      try {
+        const isPro = user.role === 'PROFESSIONAL';
+        const endpoint = isPro 
+          ? `/api/chat/sessions/pro/${user.id}` 
+          : `/api/chat/sessions/user/${user.id}`;
+        
+        const response = await apiClient.get(endpoint);
+        const sessions = response.data.data.map(session => ({
+          id: session.id,
+          name: isPro ? `Client ${session.userId}` : `Professional ${session.professionalId}`,
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
+          lastMessage: 'Open conversation',
+          time: 'Active',
+          unread: 0,
+          online: true,
+          status: session.status
+        }));
+        setChats(sessions);
+      } catch (err) {
+        console.error('Error fetching sessions:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSessions();
+    connectWebSocket();
+
+    return () => {
+      if (stompClient && stompClient.connected) {
+        stompClient.disconnect();
+      }
+    };
+  }, [user]);
+
+  // --- HANDLE CHAT SELECTION ---
+  useEffect(() => {
+    if (activeChatId) {
+      const fetchHistory = async () => {
+        try {
+          const response = await apiClient.get(`/api/chat/${activeChatId}/history`);
+          setMessages(response.data.data);
+          subscribeToChat(activeChatId);
+        } catch (err) {
+          console.error('Error fetching history:', err);
+        }
+      };
+      fetchHistory();
+    }
+  }, [activeChatId]);
 
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [chats, activeChatId]);
-
-  const handleChatClick = (id) => {
-    setActiveChatId(id);
-    setChats(prev => prev.map(chat => chat.id === id ? { ...chat, unread: 0 } : chat));
-    setReplyingToMsg(null);
-  };
+  }, [messages]);
 
   const handleSendMessage = () => {
-    if (messageText.trim() === '') return;
-    const newMsg = {
-      id: Date.now(),
-      sender: 'me',
-      text: messageText,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'delivered'
+    if (messageText.trim() === '' || !activeChatId) return;
+
+    const messageRequest = {
+      chatSessionId: activeChatId,
+      senderId: user.id,
+      receiverId: chats.find(c => c.id === activeChatId)?.professionalId || chats.find(c => c.id === activeChatId)?.userId,
+      content: messageText,
+      type: 'TEXT'
     };
-    
-    setChats(prev => prev.map(chat => {
-      if (chat.id === activeChatId) {
-         return {
-            ...chat,
-            lastMessage: messageText,
-            time: newMsg.time,
-            history: [...chat.history, newMsg]
-         };
-      }
-      return chat;
-    }));
-    setMessageText('');
-    setReplyingToMsg(null);
+
+    if (stompClient && stompClient.connected) {
+      stompClient.send("/app/chat.send", {}, JSON.stringify(messageRequest));
+      setMessageText('');
+    } else {
+      alert('Connection lost. Reconnecting...');
+      connectWebSocket();
+    }
   };
 
-  const handleExportChat = () => {
-    if (!activeChat) return;
-
-    let content = `Chat Export with ${activeChat.name}\n`;
-    content += `Role: ${activeChat.role || 'Expert'}\n`;
-    content += `Date: ${new Date().toLocaleDateString()}\n`;
-    content += `==============================================\n\n`;
-
-    activeChat.history.forEach(msg => {
-      const senderName = msg.sender === 'me' ? 'You' : activeChat.name;
-      content += `[${msg.time}] ${senderName}:\n${msg.text}\n\n`;
-    });
-
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Chat_Export_${activeChat.name.replace(/\s+/g, '_')}.txt`);
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    URL.revokeObjectURL(url);
-    setShowOptionsDropdown(false);
-  };
+  const activeChat = chats.find(c => c.id === activeChatId);
+  const userRole = user?.role?.toLowerCase() || 'client';
 
   const handleNegotiate = (msg, percent) => {
     const currentPrice = parseInt(msg.price);
@@ -147,55 +159,38 @@ const Messages = () => {
     const newPrice = currentPrice - discount;
     
     const negotiationMsg = {
-      id: Date.now(),
-      sender: userRole === 'client' ? 'me' : 'expert',
-      type: 'appointment',
+      chatSessionId: activeChatId,
+      senderId: user.id,
+      type: 'APPOINTMENT',
       date: msg.date,
       time: msg.time,
       price: newPrice.toString(),
-      text: `${userRole === 'client' ? 'Client' : 'Expert'} proposed a ${percent}% price adjustment.`,
-      time_sent: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'sent',
-      apptStatus: 'pending'
+      content: `${user.role === 'CLIENT' ? 'Client' : 'Expert'} proposed a ${percent}% price adjustment.`,
     };
 
-    setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, history: [...c.history, negotiationMsg] } : c));
+    if (stompClient && stompClient.connected) {
+      stompClient.send("/app/chat.send", {}, JSON.stringify(negotiationMsg));
+    }
   };
 
   const handleApptAction = (msgId, action) => {
-    setChats(prev => prev.map(chat => {
-      if (chat.id === activeChatId) {
-        return {
-          ...chat,
-          history: chat.history.map(msg => {
-            if (msg.id === msgId) {
-              return { ...msg, apptStatus: action };
-            }
-            return msg;
-          })
-        };
-      }
-      return chat;
-    }));
+    // Local optimistic update
+    setMessages(prev => prev.map(msg => msg.id === msgId ? { ...msg, apptStatus: action } : msg));
     
     if (action === 'accepted') {
-       // Mock redirect or payment flow
-       setTimeout(() => {
-         alert('Strategic payment secure gateway initialized. Redirecting to consultation room...');
-       }, 500);
+       alert('Strategic payment secure gateway initialized. Redirecting to consultation room...');
     }
   };
 
   const filteredChats = chats.filter(chat => {
     if (activeFilter === 'UNREAD' && chat.unread === 0) return false;
-    if (activeFilter === 'ARCHIVE' && !chat.isArchived) return false;
-    
     if (searchQuery.trim() !== '') {
-      return chat.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-             chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
+      return chat.name.toLowerCase().includes(searchQuery.toLowerCase());
     }
     return true;
   });
+
+  if (loading) return <div className="loading-screen">Authenticating Secure Channel...</div>;
 
   return (
     <div className="messages-page-wrapper">
@@ -287,7 +282,7 @@ const Messages = () => {
               <div 
                 key={chat.id} 
                 className={`chat-list-item ${chat.id === activeChatId ? 'active' : ''}`}
-                onClick={() => handleChatClick(chat.id)}
+                onClick={() => setActiveChatId(chat.id)}
               >
                 <div className="chat-avatar-wrapper">
                   <img src={chat.avatar} alt={chat.name} />
@@ -299,11 +294,7 @@ const Messages = () => {
                     <span className="msg-time">{chat.time}</span>
                   </div>
                   <p className={chat.unread > 0 ? 'unread-txt' : ''}>
-                    {chat.typing ? (
-                      <span style={{ color: '#10b981', fontWeight: 600 }}>typing...</span>
-                    ) : (
-                      chat.lastMessage
-                    )}
+                    {chat.lastMessage}
                   </p>
                 </div>
                 {chat.unread > 0 && <span className="unread-badge">{chat.unread}</span>}
@@ -351,14 +342,8 @@ const Messages = () => {
                     <h3>{activeChat.name}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ color: activeChat.online ? '#10b981' : '#888', textTransform: 'none', fontWeight: 500 }}>
-                        {activeChat.typing ? 'typing...' : (activeChat.online ? 'online' : 'offline')}
+                        {activeChat.online ? 'online' : 'offline'}
                       </span>
-                      <button 
-                        onClick={() => setUserRole(userRole === 'client' ? 'expert' : 'client')}
-                        style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', color: '#888', cursor: 'pointer', fontWeight: 700 }}
-                      >
-                        VIEW AS: {userRole.toUpperCase()}
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -463,11 +448,11 @@ const Messages = () => {
                 </div>
                 
                 {(showChatSearch && chatSearchQuery.trim() !== '' 
-                  ? activeChat.history.filter(msg => msg.text.toLowerCase().includes(chatSearchQuery.toLowerCase()))
-                  : activeChat.history
+                  ? messages.filter(msg => msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                  : messages
                 ).map((msg, idx) => (
-                  <div key={idx} className={`message-bubble-wrapper ${msg.sender === 'me' ? 'sent' : 'received'}`} style={{ position: 'relative' }} onContextMenu={(e) => { e.preventDefault(); setActiveMessageMenu(msg.id); }}>
-                    {msg.sender === 'expert' && <img src={activeChat.avatar} className="msg-avatar" alt="Expert" />}
+                  <div key={msg.id || idx} className={`message-bubble-wrapper ${msg.senderId === user.id ? 'sent' : 'received'}`} style={{ position: 'relative' }}>
+                    {msg.senderId !== user.id && <img src={activeChat.avatar} className="msg-avatar" alt="Expert" />}
                     <div className="message-content">
                       {msg.type === 'appointment' ? (
                         <div className="appointment-card animate-reveal">
@@ -536,14 +521,12 @@ const Messages = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="message-bubble">{msg.text}</div>
+                        <div className="message-bubble">{msg.content || msg.text}</div>
                       )}
                       <div className="message-time">
-                        {msg.time || msg.time_sent}
-                        {msg.sender === 'me' && (
-                          <span className={`msg-status-tick ${msg.status === 'read' ? 'read' : 'delivered'}`}>
-                            {msg.status === 'read' ? '✓✓' : '✓'}
-                          </span>
+                        {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (msg.time || msg.time_sent)}
+                        {msg.senderId === user.id && (
+                          <span className="msg-status-tick delivered">✓</span>
                         )}
                       </div>
                     </div>
